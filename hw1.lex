@@ -192,20 +192,9 @@ void str_add_asci_escaped(char* str)
 
 void double_str_add_asci_escaped(char* str)
 {
-    char escaped_char;
-    int hex_value;
-    sscanf(str + 1, "%x", &hex_value);
-    // if( hex_value < 0x20 || hex_value > 0x7e )
-    // {
-    //     // do nothing
-    //     error("undefined escape sequence %s", str + 1);
-    // }else
-    // {
-        escaped_char = (char) hex_value;
-        int i = 0;
-        for(i=0; i<yyleng; i++)
-        {
-            str_add_char(str[i]);
-        }
-    // }
+    int i = 0;
+    for(i=0; i<yyleng; i++)
+    {
+        str_add_char(str[i]);
+    }
 }
