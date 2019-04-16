@@ -76,6 +76,10 @@ combinator      ([\>\+\~])
 \}                                  { showToken("RBRACE", yytext); }
 \[                                  { showToken("LBRACKET", yytext); }
 \]                                  { showToken("RBRACKET", yytext); }
+=                                   { showToken("EQUAL", yytext); }
+\*                                  { showToken("ASTERISK", yytext); }
+\.                                  { showToken("DOT", yytext); }
+
 {name_prefix}+{name_content}*       { showToken("NAME", yytext); }
 #{hash_prefix}+{name_content}*      { showToken("HASHID", yytext); }
 @import                             { showToken("IMPORT", yytext); }
