@@ -25,6 +25,7 @@ int string_cursor = 0;
 
 digit   		([0-9])
 letter  		([a-zA-Z])
+lower           ([a-z])
 alpha           ({letter}|{digit})
 whitespace		([\t \x09\x0A\x0D])
 textual         ({alpha}|{whitespace})
@@ -39,6 +40,10 @@ hash_prefix     ([\-]{letter}|{digit}|{letter})
 important       ([iI][mM][pP][oO][rR][tT][aA][nN][tT])
 hexa            ([0-9a-fA-F])
 combinator      ([\>\+\~])
+real            ({digit}*[\.]?{digit}+)
+unit            ({real}({lower}+|\%))
+int_arg         ({whitespace}*[\+\-]?{digit}+{whitespace}*)
+three_d_vec     (\({int_arg}\,{int_arg}\,{int_arg}\))
 
 %x COMMENT
 %x DOUBLE_STRING
@@ -78,15 +83,17 @@ combinator      ([\>\+\~])
 \]                                  { showToken("RBRACKET", yytext); }
 =                                   { showToken("EQUAL", yytext); }
 \*                                  { showToken("ASTERISK", yytext); }
+{unit}                              { showToken("UNIT", yytext); }
+rgb{three_d_vec}                    { showToken("RGB", yytext); }
 \.                                  { showToken("DOT", yytext); }
-
+[\+\-]?(0x{hexa}+|{digit}+)         { showToken("NUMBER", yytext); }
 {name_prefix}+{name_content}*       { showToken("NAME", yytext); }
 #{hash_prefix}+{name_content}*      { showToken("HASHID", yytext); }
 @import                             { showToken("IMPORT", yytext); }
 !{whitespace}*{important}           { showToken("IMPORTANT", yytext); }
 
 {whitespace}				        {;}
-.		                            {printf("Error %s\n", yytext);}
+.		                            { error("%s", yytext); }
 
 %%
 
