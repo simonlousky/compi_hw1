@@ -15,7 +15,7 @@ void str_add_asci_escaped(char*);
 void str_add_char(char);
 
 int comment_lines = 1;
-char string_buffer[STR_LENGTH] = { 0 };
+char string_buffer[STR_LENGTH + 1] = { 0 };
 int string_cursor = 0;
 
 %}
@@ -38,6 +38,7 @@ name_content    ({alpha}|[\_\-])
 hash_prefix     ([\-]{letter}|{digit}|{letter})
 important       ([iI][mM][pP][oO][rR][tT][aA][nN][tT])
 hexa            ([0-9a-fA-F])
+combinator      ([\>\+\~])
 
 %x COMMENT
 %x DOUBLE_STRING
@@ -61,6 +62,20 @@ hexa            ([0-9a-fA-F])
 <SINGLE_STRING>{asci}               { str_add_char(yytext[0]); }
 <SINGLE_STRING>.                    { error("%s", yytext); }
 
+\"                                  { BEGIN(DOUBLE_STRING); }
+<DOUBLE_STRING>\"                   { BEGIN(INITIAL); showString();}
+<DOUBLE_STRING><<EOF>>              { error("unclosed string"); }
+<DOUBLE_STRING>{newline}            { error("unclosed string"); }
+<DOUBLE_STRING>{asci}               { str_add_char(yytext[0]); }
+<DOUBLE_STRING>.                    { error("%s", yytext); }
+
+{combinator}                        { showToken("COMB", yytext); }
+:                                   { showToken("COLON", yytext); }
+;                                   { showToken("SEMICOLON", yytext); }
+\{                                  { showToken("LBRACE", yytext); }
+\}                                  { showToken("RBRACE", yytext); }
+\[                                  { showToken("LBRACKET", yytext); }
+\]                                  { showToken("RBRACKET", yytext); }
 {name_prefix}+{name_content}*       { showToken("NAME", yytext); }
 #{hash_prefix}+{name_content}*      { showToken("HASHID", yytext); }
 @import                             { showToken("IMPORT", yytext); }
@@ -97,6 +112,7 @@ void error(const char* fmt, ...)
 
 void showString()
 {
+    string_buffer[string_cursor] = '\0';
     showToken("STRING", (char*) string_buffer);
     string_cursor = 0;
 }
@@ -108,8 +124,23 @@ void str_add_char(char c)
 
 void str_add_escaped(char* str)
 {
-    str_add_char(str[0]);
-    str_add_char(str[1]);
+    char escape_char;
+    switch(str[1])
+    {
+        case 'n':
+        escape_char = '\n';
+        break;
+        case 't':
+        escape_char = '\t';
+        break;
+        case 'r':
+        escape_char = '\r';
+        break;
+        case '\\':
+        escape_char = '\\';
+        break;
+    }
+    str_add_char(escape_char);
 }
 
 void str_add_asci_escaped(char* str)
@@ -117,11 +148,13 @@ void str_add_asci_escaped(char* str)
     char escaped_char;
     int hex_value;
     sscanf(str + 1, "%x", &hex_value);
-    printf("debug %d\n", hex_value);
     if( hex_value < 0x20 || hex_value > 0x7e )
     {
-        error("undefined escape sequence %s", str + 1);
+        // do nothing
+        // error("undefined escape sequence %s", str + 1);
+    }else
+    {
+        escaped_char = (char) hex_value;
+        str_add_char(escaped_char);
     }
-    escaped_char = (char) hex_value;
-    str_add_char(escaped_char);
 }
