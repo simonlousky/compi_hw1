@@ -12,7 +12,9 @@ void error(const char* fmt, ...);
 void showString();
 void str_add_escaped(char*);
 void str_add_asci_escaped(char*);
+void double_str_add_asci_escaped(char* str);
 void str_add_char(char);
+void warning(const char* fmt, ...);
 
 int comment_lines = 1;
 char string_buffer[STR_LENGTH + 1] = { 0 };
@@ -53,9 +55,11 @@ three_d_vec     (\({int_arg}\,{int_arg}\,{int_arg}\))
 
 \/\*                                { BEGIN(COMMENT); }
 <COMMENT>\*\/                       { BEGIN(INITIAL); showComment(); }
+<COMMENT>\/\*                       { warning("nested comment"); }
 <COMMENT>{newline}                  { comment_lines++; }
 <COMMENT>{asci}	                    {;}
-<COMMENT><<EOF>>                    { error("Error unclosed commend"); }
+<COMMENT>.                          { error("/"); }
+<COMMENT><<EOF>>                    { error("unclosed comment"); }
 
 \'                                  { BEGIN(SINGLE_STRING); }
 <SINGLE_STRING>\'                   { BEGIN(INITIAL); showString();}
@@ -65,14 +69,17 @@ three_d_vec     (\({int_arg}\,{int_arg}\,{int_arg}\))
 <SINGLE_STRING>{asci_escape}        { str_add_asci_escaped(yytext); }
 <SINGLE_STRING>\\{asci}             { error("undefined escape sequence %s", yytext + 1); }
 <SINGLE_STRING>{asci}               { str_add_char(yytext[0]); }
-<SINGLE_STRING>.                    { error("%s", yytext); }
+<SINGLE_STRING>.                    { error("\'", yytext); }
 
 \"                                  { BEGIN(DOUBLE_STRING); }
 <DOUBLE_STRING>\"                   { BEGIN(INITIAL); showString();}
 <DOUBLE_STRING><<EOF>>              { error("unclosed string"); }
 <DOUBLE_STRING>{newline}            { error("unclosed string"); }
+<DOUBLE_STRING>{escape}             { str_add_char(yytext[0]); str_add_char(yytext[1]);}
+<DOUBLE_STRING>{asci_escape}        { double_str_add_asci_escaped(yytext); }
+<DOUBLE_STRING>\\{asci}             { error("undefined escape sequence %s", yytext + 1); }
 <DOUBLE_STRING>{asci}               { str_add_char(yytext[0]); }
-<DOUBLE_STRING>.                    { error("%s", yytext); }
+<DOUBLE_STRING>.                    { error("\"", yytext); }
 
 {combinator}                        { showToken("COMB", yytext); }
 :                                   { showToken("COLON", yytext); }
@@ -85,6 +92,7 @@ three_d_vec     (\({int_arg}\,{int_arg}\,{int_arg}\))
 \*                                  { showToken("ASTERISK", yytext); }
 {unit}                              { showToken("UNIT", yytext); }
 rgb{three_d_vec}                    { showToken("RGB", yytext); }
+rgb\(                                { error("in rgb parameters"); }
 \.                                  { showToken("DOT", yytext); }
 [\+\-]?(0x{hexa}+|{digit}+)         { showToken("NUMBER", yytext); }
 {name_prefix}+{name_content}*       { showToken("NAME", yytext); }
@@ -92,28 +100,39 @@ rgb{three_d_vec}                    { showToken("RGB", yytext); }
 @import                             { showToken("IMPORT", yytext); }
 !{whitespace}*{important}           { showToken("IMPORTANT", yytext); }
 
-{whitespace}				        {;}
+{whitespace}				        { }
 .		                            { error("%s", yytext); }
 
 %%
 
 void showComment()
 {
-    printf("1 COMMENT %d\n", comment_lines);
+    printf("%d COMMENT %d\n", yylineno, comment_lines);
     comment_lines = 1;
 }
 
 void showToken(char* name, char* content)
 {
-    printf("1 %s %s\n", name, content);
+    printf("%d %s %s\n",yylineno, name, content);
 }
 
 void error(const char* fmt, ...)
 {
+    printf("Error ");
     va_list argptr;
     va_start(argptr, fmt);
+    vfprintf(stdout, fmt, argptr);
+    printf("\n");
+
+    va_end(argptr);
+    exit(0);
+}
+
+void warning(const char* fmt, ...){
     
-    printf("Error ");
+    printf("Warning ");
+    va_list argptr;
+    va_start(argptr, fmt);
     vfprintf(stdout, fmt, argptr);
     printf("\n");
 
@@ -168,4 +187,24 @@ void str_add_asci_escaped(char* str)
         escaped_char = (char) hex_value;
         str_add_char(escaped_char);
     }
+}
+
+
+void double_str_add_asci_escaped(char* str)
+{
+    char escaped_char;
+    int hex_value;
+    sscanf(str + 1, "%x", &hex_value);
+    // if( hex_value < 0x20 || hex_value > 0x7e )
+    // {
+    //     // do nothing
+    //     error("undefined escape sequence %s", str + 1);
+    // }else
+    // {
+        escaped_char = (char) hex_value;
+        for(int i=0; i<yyleng; i++)
+        {
+            str_add_char(str[i]);
+        }
+    // }
 }
