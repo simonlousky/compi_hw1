@@ -51,8 +51,8 @@ char str_buf[1025];
 %option yylineno
 %option noyywrap
 
-digit   	        ([0-9])
-letter  		      ([a-zA-Z])
+digit   	      ([0-9])
+letter  		  ([a-zA-Z])
 alphanumeric      ({digit}|{letter})
 newline           (\n|\r|\r\n)
 sign              ([+-])
@@ -69,8 +69,8 @@ whitespace        ([\t ]|{newline})
 
 %%
 
-"---"                       showToken("STARTSTRUCT");
-"..."                       showToken("ENDSTRUCT");
+"---"             showToken("STARTSTRUCT");
+"..."             showToken("ENDSTRUCT");
 "["                         showToken("LLIST");
 "]"                         showToken("RLIST");
 "{"                         showToken("LDICT");
