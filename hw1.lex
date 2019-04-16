@@ -202,7 +202,8 @@ void double_str_add_asci_escaped(char* str)
     // }else
     // {
         escaped_char = (char) hex_value;
-        for(int i=0; i<yyleng; i++)
+        int i = 0;
+        for(i=0; i<yyleng; i++)
         {
             str_add_char(str[i]);
         }
